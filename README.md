@@ -66,3 +66,52 @@ cd frontend && npm run build
 # 前端预览构建产物
 cd frontend && npm run preview
 ```
+
+## 一键启动
+
+**Linux / macOS**
+
+```bash
+#!/bin/bash
+# start.sh
+
+echo "🚀 启动后端..."
+cd backend && mvn spring-boot:run &
+BACKEND_PID=$!
+
+echo "🚀 启动前端..."
+cd ../frontend && npm run dev &
+FRONTEND_PID=$!
+
+# 等待 Ctrl+C
+trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit" INT TERM
+wait
+```
+
+使用方式：
+
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+**Windows (PowerShell)**
+
+```powershell
+# start.ps1
+
+Write-Host "🚀 启动后端..."
+Start-Process -FilePath "mvn" -ArgumentList "spring-boot:run" -WorkingDirectory "backend"
+
+Write-Host "🚀 启动前端..."
+Start-Process -FilePath "npm" -ArgumentList "run", "dev" -WorkingDirectory "frontend"
+```
+
+## 端口说明
+
+| 服务 | 默认端口 | 配置文件 |
+|------|----------|----------|
+| 后端 | 8081 | `backend/src/main/resources/application.yml` |
+| 前端 | 3000 | `frontend/vite.config.js` |
+
+如遇端口冲突，修改对应配置文件中的端口号即可。
