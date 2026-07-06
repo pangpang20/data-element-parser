@@ -86,7 +86,7 @@
             </td>
             <td style="max-width:200px;word-break:break-all;font-size:12px">{{ de.valueDomain || '-' }}</td>
             <td>
-              <button class="copy-btn" @click="showDetail(de)">查看</button>
+              <button class="btn btn-detail" @click="showDetail(de)">查看</button>
             </td>
           </tr>
         </tbody>
