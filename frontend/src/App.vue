@@ -2,7 +2,7 @@
   <div class="app-container">
     <div class="header">
       <h1>📊 数据元解析与治理规则生成</h1>
-      <p>基于江苏省地方标准 DB32/T 4124 · 支持 OceanBase 数据库</p>
+      <p>基于 GB/T 19488.1-2004 电子政务数据元标准 · 六性治理 · 多语言规则生成</p>
     </div>
 
     <!-- 输入区域 -->
@@ -42,7 +42,7 @@
     <!-- 数据元结果 -->
     <div class="card" v-if="dataElements.length > 0">
       <div class="section-header">
-        <div class="card-title">数据元信息（{{ dataElements.length }}项）</div>
+        <div class="card-title">数据元信息（{{ dataElements.length }}项）- GB/T 19488.1-2004</div>
         <button
           class="btn btn-success"
           @click="handleGenerateRules"
@@ -56,34 +56,38 @@
       <table>
         <thead>
           <tr>
-            <th>名称</th>
             <th>标识符</th>
-            <th>定义</th>
+            <th>中文名称</th>
+            <th>英文名称</th>
             <th>数据类型</th>
-            <th>长度</th>
-            <th>精度</th>
+            <th>数据格式</th>
+            <th>分类</th>
+            <th>注册状态</th>
             <th>值域</th>
-            <th>单位</th>
-            <th>约束</th>
-            <th>备注</th>
+            <th style="width:60px">详情</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(de, index) in dataElements" :key="index">
-            <td><strong>{{ de.name }}</strong></td>
             <td><code>{{ de.identifier }}</code></td>
-            <td>{{ de.definition }}</td>
+            <td><strong>{{ de.cnName || de.name }}</strong></td>
+            <td style="font-size:12px;color:#999;font-family:monospace">{{ de.enName || '-' }}</td>
             <td>
               <span class="tag" :class="getDataTypeClass(de.dataType)" :title="de.dataType">
                 {{ de.dataTypeCode || de.dataType }}
               </span>
             </td>
-            <td>{{ de.length }}</td>
-            <td>{{ de.precision || '-' }}</td>
-            <td>{{ de.valueRange || '-' }}</td>
-            <td>{{ de.unit || '-' }}</td>
-            <td>{{ de.constraint || '-' }}</td>
-            <td>{{ de.remark || '-' }}</td>
+            <td><code style="font-size:12px">{{ de.format || '-' }}</code></td>
+            <td>{{ de.classification || '-' }}</td>
+            <td>
+              <span class="tag" :class="getStatusClass(de.regStatus)">
+                {{ de.regStatus || '-' }}
+              </span>
+            </td>
+            <td style="max-width:200px;word-break:break-all;font-size:12px">{{ de.valueDomain || '-' }}</td>
+            <td>
+              <button class="copy-btn" @click="showDetail(de)">查看</button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -91,23 +95,66 @@
 
     <!-- 治理规则结果 -->
     <div class="card" v-if="governanceRules.length > 0">
-      <div class="card-title">治理规则（{{ governanceRules.length }}项）- OceanBase SQL</div>
+      <div class="card-title">治理规则（{{ filteredRules.length }}项）</div>
 
-      <div class="rule-card" v-for="(rule, index) in governanceRules" :key="index">
-        <div class="rule-header">
-          <span class="rule-name">{{ rule.ruleName }}</span>
-          <span class="tag" :class="getSeverityClass(rule.severity)">
-            {{ rule.severity }}
-          </span>
-        </div>
-        <div class="rule-desc">{{ rule.description }}</div>
-        <div class="sql-box" v-html="highlightSql(rule.sqlExpression)"></div>
+      <!-- 六性筛选 -->
+      <div class="dimension-filters">
+        <span
+          v-for="dim in dimensions"
+          :key="dim.key"
+          class="dim-filter"
+          :class="{ active: activeDimension === dim.key }"
+          @click="activeDimension = dim.key"
+        >
+          {{ dim.label }} ({{ getDimCount(dim.key) }})
+        </span>
       </div>
 
-      <!-- 复制全部 SQL -->
+      <!-- Tab 切换 -->
+      <div class="tab-bar">
+        <span
+          v-for="tab in tabs"
+          :key="tab.key"
+          class="tab-item"
+          :class="{ active: activeTab === tab.key }"
+          @click="activeTab = tab.key"
+        >
+          {{ tab.label }}
+        </span>
+      </div>
+
+      <!-- 规则列表 -->
+      <div class="rule-card" v-for="(rule, index) in filteredRules" :key="index">
+        <div class="rule-header">
+          <span class="rule-name">{{ rule.ruleName }}</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="tag" :class="getDimensionClass(rule.qualityDimension)">
+              {{ rule.qualityDimension }}
+            </span>
+            <span class="tag" :class="getSeverityClass(rule.severity)">
+              {{ rule.severity }}
+            </span>
+          </div>
+        </div>
+        <div class="rule-desc">{{ rule.description }}</div>
+
+        <!-- OceanBase SQL -->
+        <div v-if="activeTab === 'sql'" class="sql-box" v-html="highlightSql(rule.sqlExpression)"></div>
+
+        <!-- 正则表达式 -->
+        <div v-if="activeTab === 'regex'" class="sql-box" v-html="highlightRegex(rule.regexExpression)"></div>
+
+        <!-- Java -->
+        <div v-if="activeTab === 'java'" class="sql-box" v-html="highlightJava(rule.javaCode)"></div>
+
+        <!-- Python -->
+        <div v-if="activeTab === 'python'" class="sql-box" v-html="highlightPython(rule.pythonCode)"></div>
+      </div>
+
+      <!-- 复制全部 -->
       <div style="margin-top: 16px; text-align: right;">
-        <button class="btn btn-primary" @click="copyAllSql" style="font-size: 12px; height: 32px; padding: 4px 16px;">
-          {{ copied ? '✓ 已复制' : '复制全部 SQL' }}
+        <button class="btn btn-primary" @click="copyAll" style="font-size: 12px; height: 32px; padding: 4px 16px;">
+          {{ copied ? '✓ 已复制' : '复制全部 ' + currentTabLabel }}
         </button>
       </div>
     </div>
@@ -119,11 +166,29 @@
         <p>未找到匹配的数据元，请尝试其他描述</p>
       </div>
     </div>
+
+    <!-- 详情弹窗 -->
+    <div class="detail-overlay" v-if="detailElement" @click.self="detailElement = null">
+      <div class="detail-modal">
+        <div class="detail-header">
+          <div class="detail-title">数据元详情 - {{ detailElement.cnName || detailElement.name }}</div>
+          <button class="detail-close" @click="detailElement = null">&times;</button>
+        </div>
+        <div class="detail-body">
+          <div class="detail-grid">
+            <template v-for="field in detailFields" :key="field.key">
+              <div class="detail-label">{{ field.label }}</div>
+              <div class="detail-value">{{ getDetailValue(field.key) || '—' }}</div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const inputText = ref('')
 const dataElements = ref([])
@@ -132,6 +197,70 @@ const loading = ref(false)
 const ruleLoading = ref(false)
 const hasSearched = ref(false)
 const copied = ref(false)
+const detailElement = ref(null)
+
+// Tab 切换
+const activeTab = ref('sql')
+const tabs = [
+  { key: 'sql', label: 'OceanBase SQL' },
+  { key: 'regex', label: '正则表达式' },
+  { key: 'java', label: 'Java' },
+  { key: 'python', label: 'Python' },
+]
+
+// 六性筛选
+const activeDimension = ref('all')
+const dimensions = [
+  { key: 'all', label: '全部' },
+  { key: '完整性', label: '完整性' },
+  { key: '准确性', label: '准确性' },
+  { key: '规范性', label: '规范性' },
+  { key: '唯一性', label: '唯一性' },
+  { key: '一致性', label: '一致性' },
+  { key: '时效性', label: '时效性' },
+]
+
+// 详情字段
+const detailFields = [
+  { key: 'identifier', label: '标识符' },
+  { key: 'internalId', label: '内部标识符' },
+  { key: 'cnName', label: '中文名称' },
+  { key: 'enName', label: '英文名称' },
+  { key: 'synonym', label: '同义名称' },
+  { key: 'keywords', label: '关键词' },
+  { key: 'definition', label: '定义' },
+  { key: 'description', label: '描述' },
+  { key: 'representation', label: '表示类' },
+  { key: 'dataType', label: '数据类型' },
+  { key: 'format', label: '数据格式' },
+  { key: 'unit', label: '计量单位' },
+  { key: 'valueDomain', label: '值域' },
+  { key: 'valueDomainMeaning', label: '值域含义' },
+  { key: 'classification', label: '分类方案' },
+  { key: 'relatedDE', label: '相关数据元' },
+  { key: 'regAuthority', label: '注册机构' },
+  { key: 'regStatus', label: '注册状态' },
+  { key: 'submitOrg', label: '提交机构' },
+  { key: 'version', label: '版本' },
+  { key: 'remarks', label: '备注' },
+]
+
+const currentTabLabel = computed(() => tabs.find(t => t.key === activeTab.value)?.label || '')
+
+const filteredRules = computed(() => {
+  if (activeDimension.value === 'all') return governanceRules.value
+  return governanceRules.value.filter(r => r.qualityDimension === activeDimension.value)
+})
+
+function getDimCount(dim) {
+  if (dim === 'all') return governanceRules.value.length
+  return governanceRules.value.filter(r => r.qualityDimension === dim).length
+}
+
+function getDetailValue(key) {
+  if (!detailElement.value) return ''
+  return detailElement.value[key] || ''
+}
 
 function fillExample(text) {
   inputText.value = text
@@ -187,15 +316,40 @@ async function handleGenerateRules() {
   }
 }
 
+function showDetail(de) {
+  detailElement.value = de
+}
+
+// ========== 样式类 ==========
+
 function getDataTypeClass(dataType) {
   if (!dataType) return ''
-  // 支持标准代码和中文
-  if (dataType === 'C' || dataType.includes('字符') || dataType.includes('字符串')) return 'tag-string'
-  if (dataType === 'N' || dataType.includes('整数') || dataType.includes('浮点') || dataType.includes('小数')) return 'tag-number'
+  if (dataType === 'C' || dataType.includes('字符')) return 'tag-string'
+  if (dataType === 'N' || dataType.includes('数值') || dataType.includes('整数') || dataType.includes('浮点')) return 'tag-number'
   if (dataType === 'D' || dataType.includes('日期')) return 'tag-date'
   if (dataType === 'T' || dataType.includes('时间')) return 'tag-time'
   if (dataType === 'B' || dataType.includes('布尔')) return 'tag-bool'
   return ''
+}
+
+function getStatusClass(status) {
+  if (status === '现行有效') return 'status-active'
+  if (status === '编制中') return 'status-draft'
+  if (status === '审核中') return 'status-review'
+  if (status === '废止') return 'status-retired'
+  return ''
+}
+
+function getDimensionClass(dim) {
+  const map = {
+    '唯一性': 'dim-uniqueness',
+    '完整性': 'dim-completeness',
+    '准确性': 'dim-accuracy',
+    '一致性': 'dim-consistency',
+    '时效性': 'dim-timeliness',
+    '规范性': 'dim-compliance',
+  }
+  return map[dim] || ''
 }
 
 function getSeverityClass(severity) {
@@ -204,38 +358,67 @@ function getSeverityClass(severity) {
   return 'tag-info'
 }
 
+// ========== 语法高亮 ==========
+
 function highlightSql(sql) {
-  if (!sql) return ''
-  // 简单的 SQL 语法高亮
-  let highlighted = sql
+  if (!sql) return '<span style="color:#999">无</span>'
+  let h = sql
     .replace(/\b(LENGTH|TRIM|ABS|FLOOR|CAST|AS|CHAR|SUBSTRING_INDEX|REGEXP|IN|AND|OR|NOT)\b/gi,
       '<span class="sql-keyword">$1</span>')
     .replace(/\b(\d+)\b/g, '<span class="sql-number">$1</span>')
     .replace(/'([^']*)'/g, '<span class="sql-string">\'$1\'</span>')
-
-  // 将 {COLUMN} 占位符高亮
-  highlighted = highlighted.replace(/\{(\w+)\}/g, '<span style="color:#9cdcfe;font-weight:bold">{$1}</span>')
-
-  return highlighted
+  h = h.replace(/\{(\w+)\}/g, '<span style="color:#9cdcfe;font-weight:bold">{$1}</span>')
+  return h
 }
 
-function copyAllSql() {
-  if (governanceRules.value.length === 0) return
+function highlightRegex(regex) {
+  if (!regex) return '<span style="color:#999">无</span>'
+  return '<span class="sql-string">' + escapeHtml(regex) + '</span>'
+}
 
-  const allSql = governanceRules.value
-    .map(r => `-- ${r.ruleName}\n-- ${r.description}\n${r.sqlExpression};\n`)
-    .join('\n')
+function highlightJava(code) {
+  if (!code) return '<span style="color:#999">无</span>'
+  let h = escapeHtml(code)
+    .replace(/\b(Pattern|matches|String|boolean)\b/g, '<span class="sql-keyword">$1</span>')
+    .replace(/"([^"]*)"/g, '<span class="sql-string">"$1"</span>')
+  return h
+}
 
-  // 优先使用 Clipboard API
+function highlightPython(code) {
+  if (!code) return '<span style="color:#999">无</span>'
+  let h = escapeHtml(code)
+    .replace(/\b(re|match)\b/g, '<span class="sql-keyword">$1</span>')
+    .replace(/(r'[^']*')/g, '<span class="sql-string">$1</span>')
+  return h
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+// ========== 复制功能 ==========
+
+function copyAll() {
+  if (filteredRules.value.length === 0) return
+
+  let text = ''
+  if (activeTab.value === 'sql') {
+    text = filteredRules.value.map(r => `-- ${r.ruleName}\n-- ${r.description}\n${r.sqlExpression};`).join('\n\n')
+  } else if (activeTab.value === 'regex') {
+    text = filteredRules.value.filter(r => r.regexExpression).map(r => `# ${r.ruleName}\n${r.regexExpression}`).join('\n\n')
+  } else if (activeTab.value === 'java') {
+    text = filteredRules.value.filter(r => r.javaCode).map(r => `// ${r.ruleName}\n${r.javaCode}`).join('\n\n')
+  } else if (activeTab.value === 'python') {
+    text = filteredRules.value.filter(r => r.pythonCode).map(r => `# ${r.ruleName}\n${r.pythonCode}`).join('\n\n')
+  }
+
   if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(allSql).then(() => {
+    navigator.clipboard.writeText(text).then(() => {
       copied.value = true
       setTimeout(() => { copied.value = false }, 2000)
-    }).catch(() => {
-      fallbackCopy(allSql)
-    })
+    }).catch(() => fallbackCopy(text))
   } else {
-    fallbackCopy(allSql)
+    fallbackCopy(text)
   }
 }
 

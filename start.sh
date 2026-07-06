@@ -8,6 +8,9 @@ set -e
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKEND_DIR="$PROJECT_DIR/backend"
 FRONTEND_DIR="$PROJECT_DIR/frontend"
+LOG_DIR="$PROJECT_DIR/logs"
+
+mkdir -p "$LOG_DIR"
 
 BACKEND_PORT=8081
 FRONTEND_PORT=3000
@@ -47,7 +50,7 @@ check_port $FRONTEND_PORT "前端"
 log "启动后端 (Spring Boot :$BACKEND_PORT)..."
 cd "$BACKEND_DIR"
 nohup mvn spring-boot:run -q \
-    > "$PROJECT_DIR/backend.log" 2>&1 &
+    > "$LOG_DIR/backend.log" 2>&1 &
 BACKEND_PID=$!
 
 # 等待后端启动
@@ -59,7 +62,7 @@ for i in $(seq 1 30); do
         break
     fi
     if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
-        err "后端启动失败，查看日志: $PROJECT_DIR/backend.log"
+        err "后端启动失败，查看日志: $LOG_DIR/backend.log"
         exit 1
     fi
     sleep 2
@@ -70,14 +73,14 @@ done
 log "启动前端 (Vite :$FRONTEND_PORT)..."
 cd "$FRONTEND_DIR"
 nohup npm run dev -- --host \
-    > "$PROJECT_DIR/frontend.log" 2>&1 &
+    > "$LOG_DIR/frontend.log" 2>&1 &
 FRONTEND_PID=$!
 
 sleep 3
 if kill -0 "$FRONTEND_PID" 2>/dev/null; then
     log "前端已就绪 ✓"
 else
-    err "前端启动失败，查看日志: $PROJECT_DIR/frontend.log"
+    err "前端启动失败，查看日志: $LOG_DIR/frontend.log"
     exit 1
 fi
 
@@ -87,7 +90,7 @@ echo ""
 log "=============================="
 log "  后端: http://localhost:$BACKEND_PORT"
 log "  前端: http://localhost:$FRONTEND_PORT"
-log "  日志: backend.log / frontend.log"
+log "  日志: $LOG_DIR/backend.log / $LOG_DIR/frontend.log"
 log "  按 Ctrl+C 停止所有服务"
 log "=============================="
 echo ""
