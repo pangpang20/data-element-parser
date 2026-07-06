@@ -436,6 +436,67 @@ tbody tr:hover {
   color: #999;
 }
 
+/* 规则表格 */
+.rule-table-wrap {
+  overflow-x: auto;
+}
+
+.rule-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.rule-table thead th {
+  background: #fafafa;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #f0f0f0;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.rule-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: top;
+}
+
+.rule-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.rule-cell-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.rule-cell-desc {
+  font-size: 11px;
+  color: #999;
+  line-height: 1.4;
+}
+
+.code-box {
+  background: #f8f8f8;
+  color: #333;
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  word-break: break-all;
+  white-space: pre-wrap;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
 /* 复制按钮 */
 .copy-btn {
   padding: 4px 12px;

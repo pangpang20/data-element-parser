@@ -113,43 +113,37 @@
           </div>
         </div>
 
-        <!-- 右侧：规则详情 -->
+        <!-- 右侧：规则表格 -->
         <div class="rule-detail">
           <template v-if="filteredRules.length > 0">
-            <!-- Tab 切换 -->
-            <div class="tab-bar">
-              <span
-                v-for="tab in tabs"
-                :key="tab.key"
-                class="tab-item"
-                :class="{ active: activeTab === tab.key }"
-                @click="activeTab = tab.key"
-              >
-                {{ tab.label }}
-              </span>
-            </div>
-
-            <!-- 规则列表 -->
-            <div class="rule-card" v-for="(rule, index) in filteredRules" :key="index">
-              <div class="rule-header">
-                <span class="rule-name">{{ rule.ruleName }}</span>
-                <span class="tag" :class="getSeverityClass(rule.severity)">
-                  {{ rule.severity }}
-                </span>
-              </div>
-              <div class="rule-desc">{{ rule.description }}</div>
-
-              <div v-if="activeTab === 'sql'" class="sql-box" v-html="highlightSql(rule.sqlExpression)"></div>
-              <div v-if="activeTab === 'regex'" class="sql-box" v-html="highlightRegex(rule.regexExpression)"></div>
-              <div v-if="activeTab === 'java'" class="sql-box" v-html="highlightJava(rule.javaCode)"></div>
-              <div v-if="activeTab === 'python'" class="sql-box" v-html="highlightPython(rule.pythonCode)"></div>
-            </div>
-
-            <!-- 复制全部 -->
-            <div style="margin-top: 16px; text-align: right;">
-              <button class="btn btn-primary" @click="copyAll" style="font-size: 12px; height: 32px; padding: 4px 16px;">
-                {{ copied ? '✓ 已复制' : '复制全部 ' + currentTabLabel }}
-              </button>
+            <div class="rule-table-wrap">
+              <table class="rule-table">
+                <thead>
+                  <tr>
+                    <th style="width:180px">规则名称</th>
+                    <th>OceanBase SQL</th>
+                    <th style="width:200px">正则表达式</th>
+                    <th style="width:200px">Java</th>
+                    <th style="width:200px">Python</th>
+                    <th style="width:70px">级别</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(rule, index) in filteredRules" :key="index">
+                    <td>
+                      <div class="rule-cell-name">{{ rule.ruleName }}</div>
+                      <div class="rule-cell-desc">{{ rule.description }}</div>
+                    </td>
+                    <td><div class="sql-box" v-html="highlightSql(rule.sqlExpression)"></div></td>
+                    <td><div class="code-box">{{ rule.regexExpression || '-' }}</div></td>
+                    <td><div class="code-box">{{ rule.javaCode || '-' }}</div></td>
+                    <td><div class="code-box">{{ rule.pythonCode || '-' }}</div></td>
+                    <td>
+                      <span class="tag" :class="getSeverityClass(rule.severity)">{{ rule.severity }}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </template>
 
@@ -202,15 +196,6 @@ const hasSearched = ref(false)
 const copied = ref(false)
 const detailElement = ref(null)
 
-// Tab 切换
-const activeTab = ref('sql')
-const tabs = [
-  { key: 'sql', label: 'OceanBase SQL' },
-  { key: 'regex', label: '正则表达式' },
-  { key: 'java', label: 'Java' },
-  { key: 'python', label: 'Python' },
-]
-
 // 六性筛选
 const activeDimension = ref('all')
 const dimensions = [
@@ -247,8 +232,6 @@ const detailFields = [
   { key: 'version', label: '版本' },
   { key: 'remarks', label: '备注' },
 ]
-
-const currentTabLabel = computed(() => tabs.find(t => t.key === activeTab.value)?.label || '')
 
 const filteredRules = computed(() => {
   if (activeDimension.value === 'all') return governanceRules.value
@@ -417,16 +400,14 @@ function escapeHtml(text) {
 function copyAll() {
   if (filteredRules.value.length === 0) return
 
-  let text = ''
-  if (activeTab.value === 'sql') {
-    text = filteredRules.value.map(r => `-- ${r.ruleName}\n-- ${r.description}\n${r.sqlExpression};`).join('\n\n')
-  } else if (activeTab.value === 'regex') {
-    text = filteredRules.value.filter(r => r.regexExpression).map(r => `# ${r.ruleName}\n${r.regexExpression}`).join('\n\n')
-  } else if (activeTab.value === 'java') {
-    text = filteredRules.value.filter(r => r.javaCode).map(r => `// ${r.ruleName}\n${r.javaCode}`).join('\n\n')
-  } else if (activeTab.value === 'python') {
-    text = filteredRules.value.filter(r => r.pythonCode).map(r => `# ${r.ruleName}\n${r.pythonCode}`).join('\n\n')
-  }
+  const text = filteredRules.value.map(r => {
+    const parts = [`-- ${r.ruleName} - ${r.description}`]
+    if (r.sqlExpression) parts.push(`[SQL] ${r.sqlExpression}`)
+    if (r.regexExpression) parts.push(`[Regex] ${r.regexExpression}`)
+    if (r.javaCode) parts.push(`[Java] ${r.javaCode}`)
+    if (r.pythonCode) parts.push(`[Python] ${r.pythonCode}`)
+    return parts.join('\n')
+  }).join('\n\n')
 
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).then(() => {
