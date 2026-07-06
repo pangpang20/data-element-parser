@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# 启动前后端服务
+# 启动前后端服务（后台运行）
 # 用法: ./start.sh
-# 按 Ctrl+C 同时停止前后端
+# 停止: ./stop.sh
 
 set -e
 
@@ -29,16 +29,6 @@ check_port() {
         exit 1
     fi
 }
-
-# 清理：停止所有子进程
-cleanup() {
-    log "正在停止服务..."
-    [[ -n "$BACKEND_PID" ]]  && kill "$BACKEND_PID"  2>/dev/null
-    [[ -n "$FRONTEND_PID" ]] && kill "$FRONTEND_PID" 2>/dev/null
-    wait 2>/dev/null
-    log "已停止所有服务"
-}
-trap cleanup EXIT INT TERM
 
 # ---------- 环境检查 ----------
 
@@ -91,9 +81,6 @@ log "=============================="
 log "  后端: http://localhost:$BACKEND_PORT"
 log "  前端: http://localhost:$FRONTEND_PORT"
 log "  日志: $LOG_DIR/backend.log / $LOG_DIR/frontend.log"
-log "  按 Ctrl+C 停止所有服务"
+log "  停止: ./stop.sh"
 log "=============================="
 echo ""
-
-# 保持前台运行，等待信号
-wait
