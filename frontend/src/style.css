@@ -329,35 +329,96 @@ tbody tr:hover {
   border-bottom-color: #1677ff;
 }
 
-/* 六性筛选标签 */
-.dimension-filters {
+/* 六性左右布局 */
+.rule-layout {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
+  gap: 20px;
+  min-height: 400px;
 }
 
-.dim-filter {
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
+.dim-sidebar {
+  width: 180px;
+  flex-shrink: 0;
+  border-right: 1px solid #f0f0f0;
+  padding-right: 16px;
+}
+
+.dim-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 6px;
   cursor: pointer;
-  border: 1px solid #d9d9d9;
-  background: #fff;
-  color: #666;
   transition: all 0.2s;
+  margin-bottom: 4px;
+  font-size: 14px;
+  color: #666;
 }
 
-.dim-filter:hover {
-  border-color: #1677ff;
+.dim-item:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.dim-item.active {
+  background: #e6f4ff;
   color: #1677ff;
+  font-weight: 500;
 }
 
-.dim-filter.active {
+.dim-item.has-rules .dim-count {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.dim-item.active.has-rules .dim-count {
   background: #1677ff;
   color: #fff;
-  border-color: #1677ff;
+}
+
+.dim-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d9d9d9;
+  flex-shrink: 0;
+}
+
+.dim-name {
+  flex: 1;
+}
+
+.dim-count {
+  font-size: 12px;
+  font-family: 'Consolas', monospace;
+  background: #f5f5f5;
+  color: #999;
+  padding: 1px 8px;
+  border-radius: 10px;
+  min-width: 24px;
+  text-align: center;
+}
+
+.rule-detail {
+  flex: 1;
+  min-width: 0;
+}
+
+.empty-dim {
+  text-align: center;
+  padding: 60px 20px;
+  color: #ccc;
+}
+
+.empty-dim-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.empty-dim p {
+  font-size: 14px;
+  color: #999;
 }
 
 /* 复制按钮 */

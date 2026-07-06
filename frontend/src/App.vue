@@ -95,67 +95,70 @@
 
     <!-- 治理规则结果 -->
     <div class="card" v-if="governanceRules.length > 0">
-      <div class="card-title">治理规则（{{ filteredRules.length }}项）</div>
+      <div class="card-title">治理规则（{{ governanceRules.length }}项）- 数据质量六性</div>
 
-      <!-- 六性筛选 -->
-      <div class="dimension-filters">
-        <span
-          v-for="dim in dimensions"
-          :key="dim.key"
-          class="dim-filter"
-          :class="{ active: activeDimension === dim.key }"
-          @click="activeDimension = dim.key"
-        >
-          {{ dim.label }} ({{ getDimCount(dim.key) }})
-        </span>
-      </div>
-
-      <!-- Tab 切换 -->
-      <div class="tab-bar">
-        <span
-          v-for="tab in tabs"
-          :key="tab.key"
-          class="tab-item"
-          :class="{ active: activeTab === tab.key }"
-          @click="activeTab = tab.key"
-        >
-          {{ tab.label }}
-        </span>
-      </div>
-
-      <!-- 规则列表 -->
-      <div class="rule-card" v-for="(rule, index) in filteredRules" :key="index">
-        <div class="rule-header">
-          <span class="rule-name">{{ rule.ruleName }}</span>
-          <div style="display:flex;gap:6px;align-items:center">
-            <span class="tag" :class="getDimensionClass(rule.qualityDimension)">
-              {{ rule.qualityDimension }}
-            </span>
-            <span class="tag" :class="getSeverityClass(rule.severity)">
-              {{ rule.severity }}
-            </span>
+      <div class="rule-layout">
+        <!-- 左侧：六性列表 -->
+        <div class="dim-sidebar">
+          <div
+            v-for="dim in dimensions"
+            :key="dim.key"
+            class="dim-item"
+            :class="{ active: activeDimension === dim.key, 'has-rules': getDimCount(dim.key) > 0 }"
+            @click="activeDimension = dim.key"
+          >
+            <span class="dim-dot" :class="getDimensionClass(dim.key)"></span>
+            <span class="dim-name">{{ dim.label }}</span>
+            <span class="dim-count">{{ getDimCount(dim.key) }}</span>
           </div>
         </div>
-        <div class="rule-desc">{{ rule.description }}</div>
 
-        <!-- OceanBase SQL -->
-        <div v-if="activeTab === 'sql'" class="sql-box" v-html="highlightSql(rule.sqlExpression)"></div>
+        <!-- 右侧：规则详情 -->
+        <div class="rule-detail">
+          <template v-if="filteredRules.length > 0">
+            <!-- Tab 切换 -->
+            <div class="tab-bar">
+              <span
+                v-for="tab in tabs"
+                :key="tab.key"
+                class="tab-item"
+                :class="{ active: activeTab === tab.key }"
+                @click="activeTab = tab.key"
+              >
+                {{ tab.label }}
+              </span>
+            </div>
 
-        <!-- 正则表达式 -->
-        <div v-if="activeTab === 'regex'" class="sql-box" v-html="highlightRegex(rule.regexExpression)"></div>
+            <!-- 规则列表 -->
+            <div class="rule-card" v-for="(rule, index) in filteredRules" :key="index">
+              <div class="rule-header">
+                <span class="rule-name">{{ rule.ruleName }}</span>
+                <span class="tag" :class="getSeverityClass(rule.severity)">
+                  {{ rule.severity }}
+                </span>
+              </div>
+              <div class="rule-desc">{{ rule.description }}</div>
 
-        <!-- Java -->
-        <div v-if="activeTab === 'java'" class="sql-box" v-html="highlightJava(rule.javaCode)"></div>
+              <div v-if="activeTab === 'sql'" class="sql-box" v-html="highlightSql(rule.sqlExpression)"></div>
+              <div v-if="activeTab === 'regex'" class="sql-box" v-html="highlightRegex(rule.regexExpression)"></div>
+              <div v-if="activeTab === 'java'" class="sql-box" v-html="highlightJava(rule.javaCode)"></div>
+              <div v-if="activeTab === 'python'" class="sql-box" v-html="highlightPython(rule.pythonCode)"></div>
+            </div>
 
-        <!-- Python -->
-        <div v-if="activeTab === 'python'" class="sql-box" v-html="highlightPython(rule.pythonCode)"></div>
-      </div>
+            <!-- 复制全部 -->
+            <div style="margin-top: 16px; text-align: right;">
+              <button class="btn btn-primary" @click="copyAll" style="font-size: 12px; height: 32px; padding: 4px 16px;">
+                {{ copied ? '✓ 已复制' : '复制全部 ' + currentTabLabel }}
+              </button>
+            </div>
+          </template>
 
-      <!-- 复制全部 -->
-      <div style="margin-top: 16px; text-align: right;">
-        <button class="btn btn-primary" @click="copyAll" style="font-size: 12px; height: 32px; padding: 4px 16px;">
-          {{ copied ? '✓ 已复制' : '复制全部 ' + currentTabLabel }}
-        </button>
+          <!-- 空状态 -->
+          <div v-else class="empty-dim">
+            <div class="empty-dim-icon">{{ getDimensionIcon(activeDimension) }}</div>
+            <p>{{ activeDimension }} 暂无规则</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -342,6 +345,7 @@ function getStatusClass(status) {
 
 function getDimensionClass(dim) {
   const map = {
+    'all': '',
     '唯一性': 'dim-uniqueness',
     '完整性': 'dim-completeness',
     '准确性': 'dim-accuracy',
@@ -350,6 +354,18 @@ function getDimensionClass(dim) {
     '规范性': 'dim-compliance',
   }
   return map[dim] || ''
+}
+
+function getDimensionIcon(dim) {
+  const map = {
+    '完整性': '🔗',
+    '准确性': '🎯',
+    '规范性': '📐',
+    '唯一性': '🔑',
+    '一致性': '🔄',
+    '时效性': '⏰',
+  }
+  return map[dim] || '📋'
 }
 
 function getSeverityClass(severity) {
