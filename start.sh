@@ -56,7 +56,7 @@ BACKEND_PID=$!
 # 等待后端启动
 log "等待后端就绪..."
 for i in $(seq 1 30); do
-    if curl -sf "http://localhost:$BACKEND_PORT/actuator/health" >/dev/null 2>&1 \
+    if curl -sf "http://localhost:$BACKEND_PORT/api/health" >/dev/null 2>&1 \
        || curl -sf "http://localhost:$BACKEND_PORT/" >/dev/null 2>&1; then
         log "后端已就绪 ✓"
         break
