@@ -135,9 +135,9 @@
                       <div class="rule-cell-desc">{{ rule.description }}</div>
                     </td>
                     <td><div class="sql-box" v-html="highlightSql(rule.sqlExpression)"></div></td>
-                    <td><div class="code-box">{{ rule.regexExpression || '-' }}</div></td>
-                    <td><div class="code-box">{{ rule.javaCode || '-' }}</div></td>
-                    <td><div class="code-box">{{ rule.pythonCode || '-' }}</div></td>
+                    <td><div class="sql-box" v-html="highlightRegex(rule.regexExpression)"></div></td>
+                    <td><div class="sql-box" v-html="highlightJava(rule.javaCode)"></div></td>
+                    <td><div class="sql-box" v-html="highlightPython(rule.pythonCode)"></div></td>
                     <td>
                       <span class="tag" :class="getSeverityClass(rule.severity)">{{ rule.severity }}</span>
                     </td>
