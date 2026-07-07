@@ -121,8 +121,8 @@
                 <thead>
                   <tr>
                     <th style="width:180px">规则名称</th>
-                    <th>OceanBase SQL</th>
                     <th style="width:200px">正则表达式</th>
+                    <th>OceanBase SQL</th>
                     <th style="width:200px">Java</th>
                     <th style="width:200px">Python</th>
                     <th style="width:70px">级别</th>
@@ -134,8 +134,8 @@
                       <div class="rule-cell-name">{{ rule.ruleName }}</div>
                       <div class="rule-cell-desc">{{ rule.description }}</div>
                     </td>
-                    <td><div class="sql-box" v-html="highlightSql(rule.sqlExpression)"></div></td>
                     <td><div class="sql-box" v-html="highlightRegex(rule.regexExpression)"></div></td>
+                    <td><div class="sql-box" v-html="highlightSql(rule.sqlExpression)"></div></td>
                     <td><div class="sql-box" v-html="highlightJava(rule.javaCode)"></div></td>
                     <td><div class="sql-box" v-html="highlightPython(rule.pythonCode)"></div></td>
                     <td>
