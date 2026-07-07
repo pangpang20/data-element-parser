@@ -95,7 +95,10 @@
 
     <!-- 治理规则结果 -->
     <div class="card" v-if="governanceRules.length > 0">
-      <div class="card-title">治理规则（{{ governanceRules.length }}项）- 数据质量六性</div>
+      <div class="section-header">
+        <div class="card-title">治理规则（{{ governanceRules.length }}项）- 数据质量六性</div>
+        <button class="btn btn-primary" @click="openAddRule" style="font-size:13px;height:36px;padding:6px 18px">+ 添加规则</button>
+      </div>
 
       <div class="rule-layout">
         <!-- 左侧：六性列表 -->
@@ -126,21 +129,55 @@
                     <th style="width:200px">Java</th>
                     <th style="width:200px">Python</th>
                     <th style="width:70px">级别</th>
+                    <th style="width:60px">操作</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(rule, index) in filteredRules" :key="index">
-                    <td>
-                      <div class="rule-cell-name">{{ rule.ruleName }}</div>
-                      <div class="rule-cell-desc">{{ rule.description }}</div>
-                    </td>
-                    <td><div class="sql-box" v-html="highlightRegex(rule.regexExpression)"></div></td>
-                    <td><div class="sql-box" v-html="highlightSql(rule.sqlExpression)"></div></td>
-                    <td><div class="sql-box" v-html="highlightJava(rule.javaCode)"></div></td>
-                    <td><div class="sql-box" v-html="highlightPython(rule.pythonCode)"></div></td>
-                    <td>
-                      <span class="tag" :class="getSeverityClass(rule.severity)">{{ rule.severity }}</span>
-                    </td>
+                  <tr v-for="(rule, idx) in filteredRules" :key="rule.ruleId">
+                    <!-- 编辑模式 -->
+                    <template v-if="editingRuleId === rule.ruleId">
+                      <td>
+                        <input v-model="editForm.ruleName" class="edit-input" placeholder="规则名称">
+                        <input v-model="editForm.description" class="edit-input edit-desc" placeholder="规则描述">
+                      </td>
+                      <td><textarea v-model="editForm.regexExpression" class="edit-textarea"></textarea></td>
+                      <td><textarea v-model="editForm.sqlExpression" class="edit-textarea"></textarea></td>
+                      <td><textarea v-model="editForm.javaCode" class="edit-textarea"></textarea></td>
+                      <td><textarea v-model="editForm.pythonCode" class="edit-textarea"></textarea></td>
+                      <td>
+                        <select v-model="editForm.severity" class="edit-select">
+                          <option value="ERROR">ERROR</option>
+                          <option value="WARNING">WARNING</option>
+                          <option value="INFO">INFO</option>
+                        </select>
+                      </td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="action-btn save" @click="saveEdit(rule)" title="保存">✓</button>
+                          <button class="action-btn cancel" @click="cancelEdit" title="取消">✗</button>
+                        </div>
+                      </td>
+                    </template>
+                    <!-- 显示模式 -->
+                    <template v-else>
+                      <td @dblclick="startEdit(rule)" style="cursor:pointer">
+                        <div class="rule-cell-name">{{ rule.ruleName }}</div>
+                        <div class="rule-cell-desc">{{ rule.description }}</div>
+                      </td>
+                      <td @dblclick="startEdit(rule)" style="cursor:pointer"><div class="sql-box" v-html="highlightRegex(rule.regexExpression)"></div></td>
+                      <td @dblclick="startEdit(rule)" style="cursor:pointer"><div class="sql-box" v-html="highlightSql(rule.sqlExpression)"></div></td>
+                      <td @dblclick="startEdit(rule)" style="cursor:pointer"><div class="sql-box" v-html="highlightJava(rule.javaCode)"></div></td>
+                      <td @dblclick="startEdit(rule)" style="cursor:pointer"><div class="sql-box" v-html="highlightPython(rule.pythonCode)"></div></td>
+                      <td>
+                        <span class="tag" :class="getSeverityClass(rule.severity)">{{ rule.severity }}</span>
+                      </td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="action-btn edit" @click="startEdit(rule)" title="编辑">✎</button>
+                          <button class="action-btn delete" @click="deleteRule(rule.ruleId)" title="删除">🗑</button>
+                        </div>
+                      </td>
+                    </template>
                   </tr>
                 </tbody>
               </table>
@@ -181,6 +218,67 @@
         </div>
       </div>
     </div>
+
+    <!-- 添加规则弹窗 -->
+    <div class="detail-overlay" v-if="showAddRule" @click.self="showAddRule = false">
+      <div class="detail-modal" style="max-width:800px">
+        <div class="detail-header">
+          <div class="detail-title">添加自定义规则</div>
+          <button class="detail-close" @click="showAddRule = false">&times;</button>
+        </div>
+        <div class="detail-body">
+          <div class="add-form">
+            <div class="form-row">
+              <label>规则名称 <span class="required">*</span></label>
+              <input v-model="newRule.ruleName" placeholder="如：自定义格式校验">
+            </div>
+            <div class="form-row">
+              <label>规则描述</label>
+              <input v-model="newRule.description" placeholder="规则的详细说明">
+            </div>
+            <div class="form-row">
+              <label>六性分类</label>
+              <select v-model="newRule.qualityDimension">
+                <option value="完整性">完整性</option>
+                <option value="准确性">准确性</option>
+                <option value="规范性">规范性</option>
+                <option value="唯一性">唯一性</option>
+                <option value="一致性">一致性</option>
+                <option value="时效性">时效性</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>严重级别</label>
+              <select v-model="newRule.severity">
+                <option value="ERROR">ERROR</option>
+                <option value="WARNING">WARNING</option>
+                <option value="INFO">INFO</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>正则表达式</label>
+              <textarea v-model="newRule.regexExpression" placeholder="如：^[0-9]{18}$" rows="2"></textarea>
+            </div>
+            <div class="form-row">
+              <label>OceanBase SQL</label>
+              <textarea v-model="newRule.sqlExpression" placeholder="如：{0} REGEXP '^[0-9]{18}$'" rows="2"></textarea>
+            </div>
+            <div class="form-row">
+              <label>Java</label>
+              <textarea v-model="newRule.javaCode" placeholder='如：Pattern.matches("...", value)' rows="2"></textarea>
+            </div>
+            <div class="form-row">
+              <label>Python</label>
+              <textarea v-model="newRule.pythonCode" placeholder="如：re.match(r'...', value)" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div style="padding:16px 24px;border-top:1px solid #f0f0f0;display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn" style="background:#f5f5f5;color:#333" @click="showAddRule = false">取消</button>
+          <button class="btn btn-primary" @click="addRule">确认添加</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -195,6 +293,17 @@ const ruleLoading = ref(false)
 const hasSearched = ref(false)
 const copied = ref(false)
 const detailElement = ref(null)
+
+// 编辑规则
+const editingRuleId = ref(null)
+const editForm = ref({})
+
+// 添加规则
+const showAddRule = ref(false)
+const newRule = ref({
+  ruleName: '', description: '', qualityDimension: '准确性',
+  severity: 'ERROR', regexExpression: '', sqlExpression: '', javaCode: '', pythonCode: ''
+})
 
 // 六性筛选
 const activeDimension = ref('all')
@@ -304,6 +413,54 @@ async function handleGenerateRules() {
 
 function showDetail(de) {
   detailElement.value = de
+}
+
+// ========== 规则编辑 ==========
+
+function startEdit(rule) {
+  editingRuleId.value = rule.ruleId
+  editForm.value = { ...rule }
+}
+
+function cancelEdit() {
+  editingRuleId.value = null
+  editForm.value = {}
+}
+
+function saveEdit(rule) {
+  const idx = governanceRules.value.findIndex(r => r.ruleId === rule.ruleId)
+  if (idx !== -1) {
+    governanceRules.value[idx] = { ...editForm.value }
+  }
+  editingRuleId.value = null
+  editForm.value = {}
+}
+
+function deleteRule(ruleId) {
+  if (!confirm('确定删除此规则？')) return
+  governanceRules.value = governanceRules.value.filter(r => r.ruleId !== ruleId)
+}
+
+function openAddRule() {
+  newRule.value = {
+    ruleName: '', description: '', qualityDimension: '准确性',
+    severity: 'ERROR', regexExpression: '', sqlExpression: '', javaCode: '', pythonCode: ''
+  }
+  showAddRule.value = true
+}
+
+function addRule() {
+  if (!newRule.value.ruleName.trim()) {
+    alert('请填写规则名称')
+    return
+  }
+  const rule = {
+    ...newRule.value,
+    ruleId: 'RULE_' + String(governanceRules.value.length + 1).padStart(4, '0'),
+    dataElementName: '自定义'
+  }
+  governanceRules.value.push(rule)
+  showAddRule.value = false
 }
 
 // ========== 样式类 ==========
